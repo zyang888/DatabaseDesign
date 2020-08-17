@@ -44,8 +44,6 @@ namespace H19
                     + "WHERE State='Washington' AND Date=@date ";
 
             DateTime tempDate = Convert.ToDateTime(iDate);
-            //DateTime tempDate = new DateTime(2020, 3, 2, 0, 0, 0);
-            //Console.WriteLine(tempDate.ToString("d", CultureInfo.CreateSpecificCulture("en-US")));
 
             List<County> hotDays = new List<County>();
             // Create and open the connection in a using block.
@@ -65,7 +63,6 @@ namespace H19
                     {
                         Console.WriteLine("\t{0}\t{1}\t{2}",
                             reader[0], reader[1], reader[2]);
-                        Console.WriteLine(reader[3].GetType());
                         hotDays.Add(new County((string)reader[1], (int)reader[3]));
                     }
                     reader.Close();
