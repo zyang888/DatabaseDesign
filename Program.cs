@@ -11,13 +11,17 @@ namespace H19
     {
 
         public DateTime when;
-
         public int cases;
+
+        public CaseDatum(DateTime dateInput, int n)
+        {
+            when = dateInput;
+            cases = n;
+        }
 
     }
     public class County
     {
-
         public String name;
         public int population;
         public virtual List<CaseDatum> Samples { get; set; }
@@ -26,34 +30,41 @@ namespace H19
         {
             name = countyName;
             population = n;
+            Samples = new List<CaseDatum>();
         }
-
     }
 
     class Program
     {
-        static List<County> HotDay(string iDate, int n)
+        static List<County> getHotCounties(int n=10)
         {
             string connectionString =
             "Data Source=(local);Initial Catalog=H19;"
             + "Integrated Security=true";
 
             // Provide the query string with a parameter placeholder.
+            //string queryString = "SELECT * from dbo.cases5 "+"WHERE State='Washington' AND Date=@date";
             string queryString =
-                "SELECT * from dbo.cases5 "
-                    + "WHERE State='Washington' AND Date=@date ";
+                "SELECT TOP (@topNumber) MAX(Date) AS LastDay, County, AVG(FIPS), (MAX(Cases)-Min(Cases)) AS Delta " +
+                "FROM (SELECT *, ROW_NUMBER() OVER(PARTITION BY County ORDER BY Date DESC) AS RowNumber " +
+                "FROM dbo.cases5 " +
+                "WHERE State = 'Washington') AS Temp " +
+                "WHERE Temp.RowNumber <= 2 " +
+                "GROUP BY County " +
+                "ORDER BY Delta DESC ";
 
-            DateTime tempDate = Convert.ToDateTime(iDate);
+            //DateTime tempDate = Convert.ToDateTime(iDate);
 
-            List<County> hotDays = new List<County>();
+            List <County> hotCounties = new List<County>();
             // Create and open the connection in a using block.
             using (SqlConnection connection =
                 new SqlConnection(connectionString))
             {
                 // Create the Command and Parameter objects.
                 SqlCommand command = new SqlCommand(queryString, connection);
-                command.Parameters.AddWithValue("@date", tempDate);
-
+                //command.Parameters.AddWithValue("@date", tempDate);
+                command.Parameters.Add("@topNumber", SqlDbType.Int);
+                command.Parameters["@topNumber"].Value = n;
                 // Open the connection in a try/catch block.
                 try
                 {
@@ -61,9 +72,9 @@ namespace H19
                     SqlDataReader reader = command.ExecuteReader();
                     while (reader.Read())
                     {
-                        Console.WriteLine("\t{0}\t{1}\t{2}",
-                            reader[0], reader[1], reader[2]);
-                        hotDays.Add(new County((string)reader[1], (int)reader[3]));
+                        County temp = new County((string)reader[1], (int)reader[2]);
+                        temp.Samples.Add(new CaseDatum(Convert.ToDateTime(reader[0]), (int)reader[3]));
+                        hotCounties.Add(temp);
                     }
                     reader.Close();
                 }
@@ -71,9 +82,8 @@ namespace H19
                 {
                     Console.WriteLine(ex.Message);
                 }
-                Console.ReadLine();
             }
-            return hotDays;
+            return hotCounties;
         }
 
         static void HotQuery()
@@ -98,7 +108,8 @@ namespace H19
 
         static void Main(string[] args)
         {
-            HotDay("2020/3/2", 5);
+            List<County> Counties = getHotCounties(5);
+            Console.WriteLine(Counties[0]);
             //HotQuery();
             //DeltaQuery();
             //TimeQuery();
