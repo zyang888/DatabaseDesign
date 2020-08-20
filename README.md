@@ -1,6 +1,6 @@
 # A3: OOP, Database design, optimization and code
 
-## introduction
+## Introduction
 
 For this assignment, for the final product of assignments 3+4, you will receive a set of requirements and ultimately create
 

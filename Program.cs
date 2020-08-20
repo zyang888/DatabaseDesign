@@ -36,26 +36,70 @@ namespace H19
 
     class Program
     {
-        static List<County> getHotCounties(int n=10)
+        static String checkDateString(String inputString)
+        {
+            DateTime dDate;
+            if (DateTime.TryParse(inputString, out dDate))
+            {
+                inputString = String.Format("{0:yyyy-MM-d}", dDate);
+            }
+            else
+            {
+                Console.WriteLine("Invalid"); // <-- Control flow goes here
+            }
+            return inputString;
+        }
+
+        static List<County> getHotCounties(String startDate, String endDate, int n = 10)
+        {
+            startDate = checkDateString(startDate);
+            endDate = checkDateString(endDate);
+            string queryString =
+                "WITH temp as " +
+                "(SELECT * FROM dbo.cases5 " +
+                $"WHERE Date = {startDate} or Date = {endDate}) " +
+                "SELECT TOP 5" +
+                "MIN(Date) AS StartDate, " +
+                "MAX(Date) AS LastDate, " +
+                "County, " +
+                "MAX(Cases)-MIN(Cases) as Delta " +
+                "FROM temp " +
+                "WHERE State = 'Washington' " +
+                "GROUP BY County " +
+                "ORDER BY Delta DESC";
+            return HotCountiesQuery(queryString,n);
+        }
+
+        static List<County> getHotCounties(String getDate, int n = 10)
+        {
+            getDate = checkDateString(getDate);
+            string queryString =
+                    "SELECT TOP (@topNumber), County, AVG(FIPS), Cases " +
+                    "FROM dbo.cases5 " +
+                    "WHERE State = 'Washington') AS Temp " +
+                    "ORDER BY Cases DESC ";
+            return HotCountiesQuery(queryString,n);
+        }
+
+        static List<County> getHotCounties(int n = 10)
+        {
+            string queryString =
+                    $"SELECT TOP (@topNumber) MAX(Date) AS LastDay, County, AVG(FIPS), (MAX(Cases)-Min(Cases)) AS Delta " +
+                    "FROM (SELECT *, ROW_NUMBER() OVER(PARTITION BY County ORDER BY Date DESC) AS RowNumber " +
+                    "FROM dbo.cases5 " +
+                    "WHERE State = 'Washington') AS Temp " +
+                    "WHERE Temp.RowNumber <= 2 " +
+                    "GROUP BY County " +
+                    "ORDER BY Delta DESC ";
+            return HotCountiesQuery(queryString,n);
+        }
+        static List<County> HotCountiesQuery(String queryString,int n)
         {
             string connectionString =
             "Data Source=(local);Initial Catalog=H19;"
             + "Integrated Security=true";
 
-            // Provide the query string with a parameter placeholder.
-            //string queryString = "SELECT * from dbo.cases5 "+"WHERE State='Washington' AND Date=@date";
-            string queryString =
-                "SELECT TOP (@topNumber) MAX(Date) AS LastDay, County, AVG(FIPS), (MAX(Cases)-Min(Cases)) AS Delta " +
-                "FROM (SELECT *, ROW_NUMBER() OVER(PARTITION BY County ORDER BY Date DESC) AS RowNumber " +
-                "FROM dbo.cases5 " +
-                "WHERE State = 'Washington') AS Temp " +
-                "WHERE Temp.RowNumber <= 2 " +
-                "GROUP BY County " +
-                "ORDER BY Delta DESC ";
-
-            //DateTime tempDate = Convert.ToDateTime(iDate);
-
-            List <County> hotCounties = new List<County>();
+            List<County> hotCounties = new List<County>();
             // Create and open the connection in a using block.
             using (SqlConnection connection =
                 new SqlConnection(connectionString))
@@ -83,19 +127,58 @@ namespace H19
                     Console.WriteLine(ex.Message);
                 }
             }
+            int count = 0;
+            foreach (County element in hotCounties)
+            {
+                count++;
+                Console.WriteLine($"No.#{count} hottest county: {element.name}");
+            }
             return hotCounties;
         }
 
-        static void HotQuery()
-        {
-            //Display "hot" counties at a date or date range
 
-        }
-
-        static void DeltaQuery()
+        static County DeltaQuery(int delta0)
         {
             //return first county(object) where delta cases per capita is greater than a given number
+            string connectionString =
+                "Data Source=(local); Initial Catalog=H19; " + "Integrated Security=true";
 
+            // Provide the query string with a parameter placeholder.
+            string queryString =
+                "SELECT * " +
+                "FROM dbo.cases5 " +
+                "WHERE state = 'Washington' " +
+                "order by county, date";
+
+            // Create and open the connection in a using block.
+            using (SqlConnection connection =
+                new SqlConnection(connectionString))
+            {
+                // Create the Command and Parameter objects.
+                SqlCommand command = new SqlCommand(queryString, connection);
+                try
+                {
+                    connection.Open();
+                    SqlDataReader reader = command.ExecuteReader();
+                    int temp = 0;
+                    while (reader.Read())
+                    {
+                        Console.WriteLine(reader[4]);
+                        if ((int)reader[4]-temp>=delta0)
+                        {
+                            return new County((string)reader[1], (int)reader[3]);
+                            Console.WriteLine("loop not broken");
+                        }
+                        temp = (int) reader[4];
+                    }
+                    reader.Close();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+            return null;
         }
 
         static void TimeQuery()
@@ -108,10 +191,8 @@ namespace H19
 
         static void Main(string[] args)
         {
-            List<County> Counties = getHotCounties(5);
-            Console.WriteLine(Counties[0]);
-            //HotQuery();
-            //DeltaQuery();
+            List<County> Counties = getHotCounties();
+            DeltaQuery(3);
             //TimeQuery();
 
         }
