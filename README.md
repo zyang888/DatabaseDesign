@@ -53,6 +53,7 @@ class County {
 
 }
 ```
+![Image of Tests](/images/hotcounties.png)
 
 ### B. return first county (object) where delta cases per capita is greater than a given number
 
@@ -60,9 +61,14 @@ class County {
 
 if you choose EF w/LinQ is similar to the example in my LinQ-ER demo
 
+![Image of Tests](/images/delta.png)
+
 ## 2. Display county info including timeserie data for daterange/all time
 
 - your code needs to return a county object with the entire timeseries of cases for use by other code (e.g. analysis engine) . County info includes population so that per-capita calculations can be made
+
+![Image of Tests](/images/timeseries.png)
+![Image of Tests](/images/timeseries2.png)
 
 ## 3. County case prediction
 
@@ -83,7 +89,7 @@ You will receive C# Interfaces
 
 And also the signature of the  calls for questions above
 
-
+![Image of Tests](/images/interface.png)
 
 For data loading, you can use your existing csv loading code (to load data in the existing format),
 
